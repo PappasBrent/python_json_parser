@@ -4,9 +4,10 @@ Author: Brent Pappas
 Date: 1-6-2021
 """
 
-from typing import List
 import unittest
-from lexer import Tag, lex, Token
+from typing import List
+
+from lexer import Tag, Token, lex
 
 
 class ParseError(Exception):
