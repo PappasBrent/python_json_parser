@@ -1,7 +1,7 @@
 """
 Title: JSON Lexer
 Author: Brent Pappas
-Date: 1-5-2021
+Date: 1-6-2021
 """
 
 # resources
@@ -9,6 +9,7 @@ Date: 1-5-2021
 # https://cswr.github.io/JsonSchema/spec/grammar/
 # https://notes.eatonphil.com/writing-a-simple-json-parser.html (if you get stuck)
 
+from typing import List
 import unicodedata
 import unittest
 from enum import Enum
@@ -24,7 +25,7 @@ class TokenError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
-        return f"{self.message}: Unexpected token '{self.character}' at line {self.line_number}"
+        return f"{self.message}: Unexpected character '{self.character}' at line {self.line_number}"
 
 
 class Tag(Enum):
@@ -96,7 +97,7 @@ class Boolean(Token):
         return self.tag == o.tag and self.value == o.value
 
 
-def lex(text: str):
+def lex(text: str) -> List['Token']:
     n = len(text)
     line_number = 1
     token_list = []
@@ -238,6 +239,11 @@ def lex(text: str):
 
                 if text[i] == '"':
                     # check whether object key or literal
+                    # it may have been better to have made colon into a token, but this works
+                    while i + 1 < n and text[i+1].isspace():
+                        if text[i + 1] == "\n":
+                            line_number += 1
+                        i += 1
                     if i + 1 < n and text[i+1] == ":":
                         token_list.append(ObjectKey(buffer))
                         i += 2  # we add 2 here and not just 1 since we break out of the inner loop
@@ -314,8 +320,6 @@ class LexerTest(unittest.TestCase):
         # In fact, I think this is actually how this should work
         self.assertEqual(
             lex(s), [Number(-123), Number(-45.6), Number(-0.0003)])
-
-    # TODO: test that error messages are correct
 
     def test_fail_end_e(self):
         tests = ["-3e", "1e", "e", "1.0e", "-3E", "1E", "E", "1.0E"]
@@ -410,9 +414,12 @@ class LexerTest(unittest.TestCase):
         s = '''
         "a":
         "abc":
-        "ab\\b":
-        "\\t\\f\\n":
-        "\\u1234":
+        "ab\\b"
+        
+        :
+        
+        "\\t\\f\\n"  :  
+        "\\u1234"   :
         "ab\\b\\u0F9atest":
         '''
         return self.assertEqual(lex(s), [
