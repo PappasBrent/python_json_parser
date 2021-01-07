@@ -7,7 +7,7 @@ Date: 1-6-2021
 import unittest
 from typing import List
 
-from lexer import Tag, Token, lex
+from .lexer import Tag, Token, lex
 
 
 class ParseError(Exception):
