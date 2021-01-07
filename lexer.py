@@ -1,18 +1,14 @@
 """
 Title: JSON Lexer
 Author: Brent Pappas
-Date: 1-6-2021
 """
 
 # resources
 # https://www.json.org/json-en.html (visual, very nice)
-# https://cswr.github.io/JsonSchema/spec/grammar/
-# https://notes.eatonphil.com/writing-a-simple-json-parser.html (if you get stuck)
 
-from typing import List
 import unicodedata
-import unittest
 from enum import Enum
+from typing import List
 
 
 class TokenError(Exception):
@@ -29,9 +25,8 @@ class TokenError(Exception):
 
 
 class Tag(Enum):
-    """
-    Enum for token tags
-    """
+    """ Enum for token tags """
+
     NUMBER = 1
     LITERAL = 2
     NULL = 3
@@ -45,7 +40,12 @@ class Tag(Enum):
 
 
 class Token(object):
-    def __init__(self, tag) -> None:
+    '''
+    Base class for lexical tokens, and for tokens which do not have an
+    attribute.
+    '''
+
+    def __init__(self, tag: 'Tag') -> None:
         self.tag = tag
 
     def __repr__(self) -> str:
@@ -56,7 +56,9 @@ class Token(object):
 
 
 class Number(Token):
-    def __init__(self, value) -> None:
+    ''' Class for tokens representing integers and floating point numbers '''
+
+    def __init__(self, value: 'Tag') -> None:
         super().__init__(Tag.NUMBER)
         self.value = value
 
@@ -68,7 +70,9 @@ class Number(Token):
 
 
 class Literal(Token):
-    def __init__(self, lexeme) -> None:
+    ''' Class for tokens representing string literals '''
+
+    def __init__(self, lexeme: str) -> None:
         super().__init__(Tag.LITERAL)
         self.lexeme = lexeme
 
@@ -80,13 +84,17 @@ class Literal(Token):
 
 
 class ObjectKey(Literal):
-    def __init__(self, lexeme) -> None:
+    ''' Class for tokens representing strings that are object keys '''
+
+    def __init__(self, lexeme: str) -> None:
         super().__init__(lexeme)
         self.tag = Tag.OBJECT_KEY
 
 
 class Boolean(Token):
-    def __init__(self, value) -> None:
+    ''' Class for tokens representing boolean values '''
+
+    def __init__(self, value: bool) -> None:
         super().__init__(Tag.BOOLEAN)
         self.value = value
 
@@ -98,6 +106,14 @@ class Boolean(Token):
 
 
 def lex(text: str) -> List['Token']:
+    '''
+    Args:
+        text: The JSON text to lex into tokens
+
+    Returns:
+        list: A list of JSON tokens
+
+    '''
     n = len(text)
     line_number = 1
     token_list = []
@@ -295,181 +311,3 @@ def lex(text: str) -> List['Token']:
         raise TokenError(text[i-1], line_number)
 
     return token_list
-
-
-class LexerTest(unittest.TestCase):
-
-    def test_lex_ints(self):
-        s = "123 456 1"
-        self.assertEqual(lex(s), [Number(123), Number(456), Number(1)])
-
-    def test_lex_floats(self):
-        s = "1.23 45.6 1.0"
-        self.assertEqual(lex(s), [Number(1.23), Number(45.6), Number(1.0)])
-
-    def test_lex_sci(self):
-        s = "1e2 2.1e3 3e-4 1E+2 2.1E+3 3E-4"
-        self.assertEqual(lex(s), [Number(100), Number(2100.0), Number(
-            0.0003), Number(100), Number(2100.0), Number(0.0003)])
-
-    def test_lex_negatives(self):
-        s = "-123 -45.6 -3e-4"
-        # this may just be a quirk of the way this works, but
-        # the input s = "-123-45.6-3e-4" works too. hmm...
-        # ah should be fine since this is just lexing
-        # In fact, I think this is actually how this should work
-        self.assertEqual(
-            lex(s), [Number(-123), Number(-45.6), Number(-0.0003)])
-
-    def test_fail_end_e(self):
-        tests = ["-3e", "1e", "e", "1.0e", "-3E", "1E", "E", "1.0E"]
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_fail_end_minus(self):
-        tests = ["-3e-", "-", "1-", "1.0-"]
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_lex_null(self):
-        tests = [
-            ("null", [Token(Tag.NULL)]),
-            ("null null", [Token(Tag.NULL), Token(Tag.NULL)])
-        ]
-        for test, expected in tests:
-            self.assertEqual(lex(test), expected)
-
-    def test_lex_null_fail(self):
-        tests = ["n", "nu", "nul", "nule", "llun"]
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_lex_bools(self):
-        tests = [
-            ("false", [Boolean(False)]),
-            ("true", [Boolean(True)]),
-            ("true false", [Boolean(True), Boolean(False)]),
-        ]
-        for test, expected in tests:
-            self.assertEqual(lex(test), expected)
-
-    def test_fail_lex_bool(self):
-        tests = ["tru", "fal", "truee", "falsee"]
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_lex_comma(self):
-        tests = [
-            (",", [Token(Tag.COMMA)]),
-            (", ,", [Token(Tag.COMMA), Token(Tag.COMMA)])
-        ]
-        for test, expected in tests:
-            self.assertEqual(lex(test), expected)
-
-    def test_lex_brackets(self):
-        def l(): return Token(Tag.LEFT_BRACKET)
-        def r(): return Token(Tag.RIGHT_BRACKET)
-        s = "[][][[]]"
-        self.assertEqual(lex(s), [l(), r(), l(), r(), l(), l(), r(), r()])
-
-    def test_lex_braces(self):
-        def l(): return Token(Tag.LEFT_BRACE)
-        def r(): return Token(Tag.RIGHT_BRACE)
-        s = "{}{}{{}}"
-        self.assertEqual(lex(s), [l(), r(), l(), r(), l(), l(), r(), r()])
-
-    def test_lex_literal(self):
-        s = '''
-        "a"
-        "abc"
-        "ab\\b"
-        "\\t\\f\\n"
-        "\\u1234"
-        "ab\\b\\u0F9atest"
-        '''
-        return self.assertEqual(lex(s), [
-            Literal("a"),
-            Literal("abc"),
-            Literal("ab\\b"),
-            Literal("\\t\\f\\n"),
-            Literal("\\u1234"),
-            Literal("ab\\b\\u0F9atest")
-        ])
-
-    def test_fail_lex_literal(self):
-        tests = ["\\", "\"", "\\u1", "\\x", "\\uGGGG"
-                 '''
-                    "this should not
-                    work"
-        ''']
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_lex_object_key(self):
-        s = '''
-        "a":
-        "abc":
-        "ab\\b"
-        
-        :
-        
-        "\\t\\f\\n"  :  
-        "\\u1234"   :
-        "ab\\b\\u0F9atest":
-        '''
-        return self.assertEqual(lex(s), [
-            ObjectKey("a"),
-            ObjectKey("abc"),
-            ObjectKey("ab\\b"),
-            ObjectKey("\\t\\f\\n"),
-            ObjectKey("\\u1234"),
-            ObjectKey("ab\\b\\u0F9atest")
-        ])
-
-    def test_fail_lex_object_key(self):
-        tests = ["\\", "\"", "\\u1", "\\x", "\\uGGGG"
-                 '''
-                    "this should not
-                    work":
-        ''']
-        for test in tests:
-            with self.assertRaises(TokenError):
-                lex(test)
-
-    def test_mixed(self):
-        s = '''
-        {
-            "name": "Brent Pappas",
-            "age": 22,
-            "interests": ["juggling", "programming", "reading"]
-        }
-
-        '''
-        self.assertEqual(lex(s),
-                         [
-            Token(Tag.LEFT_BRACE),
-            ObjectKey("name"),
-            Literal("Brent Pappas"),
-            Token(Tag.COMMA),
-            ObjectKey("age"),
-            Number(22),
-            Token(Tag.COMMA),
-            ObjectKey("interests"),
-            Token(Tag.LEFT_BRACKET),
-            Literal("juggling"),
-            Token(Tag.COMMA),
-            Literal("programming"),
-            Token(Tag.COMMA),
-            Literal("reading"),
-            Token(Tag.RIGHT_BRACKET),
-            Token(Tag.RIGHT_BRACE)
-        ])
-
-
-if __name__ == "__main__":
-    unittest.main()

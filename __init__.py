@@ -1,3 +1,7 @@
+'''
+__init__.py file to expose user-friendly API
+'''
+
 from typing import Dict, List, Union
 
 from .lexer import lex

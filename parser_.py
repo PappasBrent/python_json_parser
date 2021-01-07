@@ -1,13 +1,11 @@
 """
 Title: JSON Parser
 Author: Brent Pappas
-Date: 1-6-2021
 """
 
-import unittest
-from typing import List
+from typing import Dict, List, Union
 
-from .lexer import Tag, Token, lex
+from lexer import Tag, Token
 
 
 class ParseError(Exception):
@@ -23,7 +21,21 @@ class ParseError(Exception):
         return f"Parse error: Unexpected token {self.token.tag.name}. Expected one of {[t.name for t in self.expected]}"
 
 
-def parse(tokens: List['Token']):
+def parse(tokens: List['Token']) -> Union[Dict, List, None]:
+    '''
+    Args:
+        tokens: A list of JSON lexical tokens
+
+    Returns:
+        dict: A Python dictionary object containing the parsed JSON
+        | list: A Python list containing the parsed JSON
+        | None: The Python None value
+
+    Each of the parser's recursive functions are implemented as a nested
+    function. It may be better to refactor this code in the future so that
+    each of these functions may be individually unit tested
+
+    '''
 
     if tokens == []:
         return None
@@ -104,81 +116,3 @@ def parse(tokens: List['Token']):
 
     # reverse tokens to support O(1) popping
     return structure(tokens[::-1])
-
-
-class ParserTest(unittest.TestCase):
-
-    def test_parse_none(self):
-        self.assertEqual(parse(lex('')), None)
-
-    def test_parse_array(self):
-        for test, expected in [
-            ('[]', []),
-            ('["simple test"]', ["simple test"]),
-            ('[null, null, null]', [None, None, None]),
-            ('[[],[]]', [[], []]),
-            ('[[null,[]],[]]', [[None, []], []]),
-            ('''[
-                    [
-                        null,
-                        []
-                    ],
-                    []
-                ]''', [[None, []], []]),
-            ('''
-            [
-                null,
-                ["test",123,null],
-                [],
-                [[]]
-            ]
-            ''', [None, ["test", 123, None], [], [[]]]),
-            ('''
-            [
-                null,
-                [
-                    "test"
-                ]
-            ]
-            ''',
-             [None, ["test"]]),
-            ('''
-            [
-                null,
-                [
-                    "test",
-                    {"key":"value"}
-                ]
-            ]
-            ''',
-             [None, ["test", {"key": "value"}]])
-        ]:
-            self.assertEqual(parse(lex(test)), expected)
-
-    def test_parse_object(self):
-        for test, expected in [
-            ('{}', {}),
-            ('{"name": "brent"}', {"name": "brent"}),
-            ('{"name": "brent","age":22}', {"name": "brent", "age": 22}),
-            ('{"name": "brent","age":22,"interests":["juggling","programming","reading"]}', {
-             "name": "brent", "age": 22, "interests": ["juggling", "programming", "reading"]}),
-            ('''{
-                "name": "brent",
-                "age":22,
-                "interests":[
-                    "juggling","programming","reading"
-                    ],
-                "key1":{"key2":"value"}}
-            ''', {"name": "brent", "age": 22, "interests": ["juggling", "programming", "reading"], "key1": {"key2": "value"}}),
-            ('''
-            {
-            "test"
-
-            : {}
-            }''', {"test": {}})
-        ]:
-            self.assertEqual(parse(lex(test)), expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
