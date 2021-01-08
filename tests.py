@@ -248,7 +248,25 @@ class ParserTest(unittest.TestCase):
             "test"
 
             : {}
-            }''', {"test": {}})
+            }''', {"test": {}}),
+            (
+                '''
+    {
+        "first name":"Arthur",
+        "last name": "Dent",
+        "age":42,
+        "interests": [
+            "flying",
+            "sandwich making"
+        ]
+    }
+    ''', {
+                    "first name": "Arthur",
+                    "last name": "Dent",
+                    "age": 42,
+                    "interests": ["flying", "sandwich making"]
+                }
+            )
         ]:
             self.assertEqual(parse(lex(test)), expected)
 
