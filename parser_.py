@@ -5,7 +5,7 @@ Author: Brent Pappas
 
 from typing import Dict, List, Union
 
-from lexer import Tag, Token
+from .lexer import Tag, Token
 
 
 class ParseError(Exception):
