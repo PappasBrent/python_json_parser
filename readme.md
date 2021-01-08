@@ -27,7 +27,7 @@ it to convert the JSON string into a Python object:
         ]
     }
     '''
-    result = json_loader.load_json_string(json_string)
+    result = python_json_parser.load_json_string(json_string)
     ```
 
 # License
